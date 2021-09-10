@@ -7,6 +7,10 @@
 
 import Foundation
 
+public protocol TUSUploadDelegate: AnyObject {
+  func modifiedUploadLocationURL(from uploadLocationURL: URL?) -> URL?
+}
+
 public class TUSUpload: NSObject, NSCoding {
     public func encode(with coder: NSCoder) {
         //
@@ -28,7 +32,6 @@ public class TUSUpload: NSObject, NSCoding {
         //
         fileType = coder.decodeObject(forKey:"fileType") as? String
         filePath = coder.decodeObject(forKey:"filePath") as? URL
-        uploadLocationURL = coder.decodeObject(forKey:"uploadLocationURL") as? URL
         contentLength = coder.decodeObject(forKey:"contentLength") as? String
         uploadLength = coder.decodeObject(forKey:"uploadLength") as? String
         uploadOffset = coder.decodeObject(forKey:"uploadOffset") as? String
@@ -40,15 +43,26 @@ public class TUSUpload: NSObject, NSCoding {
         // Migration safe: in previous versions this field did not exists so we set it in a safe manner
         let prevStatusString = coder.decodeObject(forKey: "prevStatus") as? String
         prevStatus = prevStatusString != nil ? TUSUploadStatus(rawValue: prevStatusString!) : nil
+
+        super.init()
+
+        uploadLocationURL = coder.decodeObject(forKey:"uploadLocationURL") as? URL
     }
     
 
     // MARK: Properties
+    public weak var delegate: TUSUploadDelegate?
     public let id: String
     var fileType: String? // TODO: Make sure only ".fileExtension" gets set. Current setup sets fileType as something like "1A1F31FE6-BB39-4A78-AECD-3C9BDE6D129E.jpeg"
     var filePath: URL?
     var data: Data?
-    public var uploadLocationURL: URL?
+    private var _uploadLocationURL: URL?
+    public var uploadLocationURL: URL? {
+      get {
+        return delegate?.modifiedUploadLocationURL(from: _uploadLocationURL) ?? _uploadLocationURL
+      }
+      set { _uploadLocationURL = newValue }
+    }
     var contentLength: String?
     var uploadLength: String?
     var uploadOffset: String?
